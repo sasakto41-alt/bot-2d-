@@ -141,11 +141,22 @@ public class ConfigManager {
     }
 
     public String wallBlock() {
-        return config.getString("wall-block", "SMOOTH_STONE");
+        return config.getString("wall-block", "GLASS");
     }
 
     public String surfaceBlock() {
         return config.getString("surface-block", "GRASS_BLOCK");
+    }
+
+    public String bottomBlock() {
+        return config.getString("bottom-block", "BEDROCK");
+    }
+
+    public int shaftWidth() {
+        int w = config.getInt("mine.shaft-width", 3);
+        if (w < 1) w = 1;
+        if (w % 2 == 0) w += 1; // odd only
+        return w;
     }
 
     public int hudUpdateTicks() {

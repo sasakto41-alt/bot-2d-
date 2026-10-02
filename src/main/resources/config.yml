@@ -9,13 +9,17 @@ world:
   spacing-x: 100
   # Spacing along the Z axis (blocks). Used as offset per row.
   spacing-z: 0
-  # Starting surface Y (where the player stands at the entrance).
-  surface-y: 64
+  # Starting surface Y — where the player stands at the entrance.
+  # Set to 120 so the mine floats in the air on a glass platform.
+  surface-y: 120
 
-# Mine sizing rules. Width is always 1 block and only grows downward.
+# Mine sizing rules. Width is always an odd number (1, 3, 5...) and
+# the mine only grows downward.
 mine:
   start-depth: 30
   max-workers: 5
+  # Shaft width. Must be odd (1, 3, 5). Default 3 = 3x3 shaft.
+  shaft-width: 3
   # Hard cap on depth so the world doesn't break.
   absolute-max-depth: 320
 
@@ -87,11 +91,16 @@ ores:
     reward: 1
     required-pickaxe: WOOD
 
-# Block used as the wall material surrounding the 1-block shaft.
-wall-block: SMOOTH_STONE
+# Block used as the wall material surrounding the shaft. Glass by default
+# so the player gets a "2D corridor" feel: they see the world through
+# the walls but cannot move sideways out of the shaft.
+wall-block: GLASS
 
 # Surface cap block placed at the very top of the shaft.
 surface-block: GRASS_BLOCK
+
+# Unbreakable floor at the bottom of every shaft. Bedrock by default.
+bottom-block: BEDROCK
 
 # Lighting and darkness rules.
 lighting:
@@ -112,11 +121,12 @@ pickaxes:
   WOOD:
     display: "&f&lДеревянная кирка"
     lore:
-      - "&7Стартовая кирка"
+      - "&7Очень слабая стартовая кирка"
+      - "&7Прочность: &a25"
       - ""
       - "&7Цена: &aБесплатно"
     price: 0
-    durability: 100
+    durability: 25
     material: WOODEN_PICKAXE
   STONE:
     display: "&6&lКаменная кирка"

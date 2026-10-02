@@ -26,20 +26,18 @@ public class BlockPlaceListener implements Listener {
         if (b == null) return;
         MineData md = plugin.getMineManager().getMineAt(b.getX(), b.getY(), b.getZ());
         if (md == null) {
-            // Not in a mine. Allow if outside all mines — vanilla rules apply.
             return;
         }
         boolean insideShaft = md.isInsideShaft(b.getX(), b.getY(), b.getZ());
         boolean isWall = md.isWall(b.getX(), b.getY(), b.getZ());
-        if (insideShaft || isWall) {
-            // Inside shaft or on a wall position: allow only TORCHES.
+        boolean isBottom = md.isBottom(b.getX(), b.getY(), b.getZ());
+        if (insideShaft || isWall || isBottom) {
+            // Torch placement allowed on walls or inside shaft.
             if (b.getType() == Material.TORCH || b.getType() == Material.WALL_TORCH) {
-                // Check access.
                 if (!plugin.getMineManager().hasAccess(e.getPlayer().getUniqueId(), md)) {
                     e.setCancelled(true);
                     plugin.getMessageManager().send(e.getPlayer(), "not-allowed-mine");
                 }
-                // Torch placement allowed.
                 return;
             }
             e.setCancelled(true);

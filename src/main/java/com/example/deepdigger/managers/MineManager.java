@@ -8,7 +8,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -23,7 +22,10 @@ import java.util.logging.Level;
 /**
  * Builds and stores personal mines.
  * <p>
- * Every player gets exactly one mine at coordinates (nx * spacing, surfaceY, 0).
+ * Every player gets exactly one mine. The mine sits on a floating
+ * platform in the sky (default Y=120). The shaft is 3x3 and is
+ * surrounded by glass walls so it visually reads as a 2D corridor.
+ * A bedrock floor caps the bottom so the player can never dig past it.
  * Storage: data/mines.yml + data/players.yml
  */
 public class MineManager {
@@ -76,8 +78,8 @@ public class MineManager {
                 md.setSurfaceZ(m.getInt("surfaceZ"));
                 md.setLevel(m.getInt("level", 1));
                 md.setDepth(m.getInt("depth", 30));
+                md.setShaftWidth(m.getInt("shaftWidth", 3));
                 mines.put(key, md);
-                // Track highest index for nextMineIndex.
                 try {
                     int idx = Integer.parseInt(key.replace("mine_", ""));
                     if (idx >= nextMineIndex) nextMineIndex = idx + 1;
@@ -123,7 +125,6 @@ public class MineManager {
     }
 
     public void saveAll() {
-        // Mines.
         for (MineData md : mines.values()) {
             String path = "mines." + md.getKey();
             minesConfig.set(path + ".owner", md.getOwner() == null ? null : md.getOwner().toString());
@@ -132,8 +133,8 @@ public class MineManager {
             minesConfig.set(path + ".surfaceZ", md.getSurfaceZ());
             minesConfig.set(path + ".level", md.getLevel());
             minesConfig.set(path + ".depth", md.getDepth());
+            minesConfig.set(path + ".shaftWidth", md.getShaftWidth());
         }
-        // Players.
         for (PlayerData pd : players.values()) {
             String path = "players." + pd.getUuid().toString();
             playersConfig.set(path + ".name", pd.getName());
@@ -188,7 +189,7 @@ public class MineManager {
 
     public MineData getMineAt(int x, int y, int z) {
         for (MineData md : mines.values()) {
-            if (md.isInsideShaft(x, y, z) || md.isWall(x, y, z)) {
+            if (md.isInsideShaft(x, y, z) || md.isWall(x, y, z) || md.isBottom(x, y, z)) {
                 return md;
             }
         }
@@ -222,11 +223,11 @@ public class MineManager {
         int spacingX = plugin.getConfigManager().spacingX();
         int spacingZ = plugin.getConfigManager().spacingZ();
         int surfaceY = plugin.getConfigManager().surfaceY();
-        // Slot position. Use index from 1; first mine at index 1 sits at X=0.
         int x = (index - 1) * spacingX;
         int z = (index - 1) * spacingZ;
         int depth = plugin.getConfigManager().startDepth();
         MineData md = new MineData(key, uuid, x, surfaceY, z, 1, depth);
+        md.setShaftWidth(plugin.getConfigManager().shaftWidth());
         mines.put(key, md);
 
         pd.setMineKey(key);
@@ -239,8 +240,10 @@ public class MineManager {
     }
 
     /**
-     * Builds the physical shaft of a mine: 1-block column from surface down to
-     * surfaceY - depth, with wall blocks on each side.
+     * Builds the physical shaft of a mine: a 3x3 (configurable) column from
+     * the surface down to surfaceY - depth, with glass walls around the
+     * perimeter, a bedrock floor at the bottom, and a 7x7 platform on top
+     * so the player has somewhere to stand on.
      */
     public void buildShaft(MineData md) {
         World w = Bukkit.getWorld(plugin.getConfigManager().worldName());
@@ -248,33 +251,74 @@ public class MineManager {
             plugin.getLogger().warning("World not found: " + plugin.getConfigManager().worldName());
             return;
         }
-        Material wall = matchMaterial(plugin.getConfigManager().wallBlock(), Material.SMOOTH_STONE);
+        Material wall = matchMaterial(plugin.getConfigManager().wallBlock(), Material.GLASS);
         Material surf = matchMaterial(plugin.getConfigManager().surfaceBlock(), Material.GRASS_BLOCK);
-        int x = md.getSurfaceX();
-        int z = md.getSurfaceZ();
+        Material floor = matchMaterial(plugin.getConfigManager().bottomBlock(), Material.BEDROCK);
+        int cx = md.getSurfaceX();
+        int cz = md.getSurfaceZ();
+        int h = md.halfWidth();
         int top = md.getSurfaceY();
         int bottom = md.getBottomY();
 
-        // Build walls down to bottom.
-        for (int y = top; y >= bottom; y--) {
-            placeWallIfAir(w, x + 1, y, z, wall);
-            placeWallIfAir(w, x - 1, y, z, wall);
-            placeWallIfAir(w, x, y, z + 1, wall);
-            placeWallIfAir(w, x, y, z - 1, wall);
+        // Place bedrock floor first (unbreakable bottom).
+        for (int dx = -h; dx <= h; dx++) {
+            for (int dz = -h; dz <= h; dz++) {
+                w.getBlockAt(cx + dx, bottom - 1, cz + dz).setType(floor, false);
+            }
         }
-        // Place surface cap on top.
-        w.getBlockAt(x, top, z).setType(surf, false);
         // Fill the shaft column with stone; this will be regenerated into ore
         // dynamically when mined.
         for (int y = top - 1; y >= bottom; y--) {
-            w.getBlockAt(x, y, z).setType(Material.STONE, false);
+            for (int dx = -h; dx <= h; dx++) {
+                for (int dz = -h; dz <= h; dz++) {
+                    w.getBlockAt(cx + dx, y, cz + dz).setType(Material.STONE, false);
+                }
+            }
         }
-        // Place a small platform around the entrance so the player doesn't fall off.
-        for (int dy = -1; dy <= 1; dy++) {
-            w.getBlockAt(x + 1, top + dy, z).setType(Material.SMOOTH_STONE, false);
-            w.getBlockAt(x - 1, top + dy, z).setType(Material.SMOOTH_STONE, false);
-            w.getBlockAt(x, top + dy, z + 1).setType(Material.SMOOTH_STONE, false);
-            w.getBlockAt(x, top + dy, z - 1).setType(Material.SMOOTH_STONE, false);
+        // Build glass walls around the perimeter (outer ring at h+1).
+        for (int y = top; y >= bottom - 1; y--) {
+            for (int i = -(h + 1); i <= h + 1; i++) {
+                // Four sides of the ring.
+                placeWallIfAir(w, cx + (h + 1), y, cz + i, wall);
+                placeWallIfAir(w, cx - (h + 1), y, cz + i, wall);
+                placeWallIfAir(w, cx + i, y, cz + (h + 1), wall);
+                placeWallIfAir(w, cx + i, y, cz - (h + 1), wall);
+            }
+        }
+        // Surface cap on top of the shaft (player stands here).
+        for (int dx = -h; dx <= h; dx++) {
+            for (int dz = -h; dz <= h; dz++) {
+                w.getBlockAt(cx + dx, top, cz + dz).setType(surf, false);
+            }
+        }
+        // Open the surface so player can dig down: clear the center 3x3 below the cap.
+        // Wait, the cap is AT top, and the shaft starts BELOW the cap. That's fine.
+
+        // Place a wider platform around the top so the player doesn't fall off
+        // when they exit.
+        int platformRadius = h + 1;
+        for (int dx = -platformRadius; dx <= platformRadius; dx++) {
+            for (int dz = -platformRadius; dz <= platformRadius; dz++) {
+                if (Math.abs(dx) <= h && Math.abs(dz) <= h) {
+                    // Already shaft top — skip.
+                    continue;
+                }
+                // Only place a ring around the top.
+                Block b = w.getBlockAt(cx + dx, top, cz + dz);
+                if (b.getType() == Material.AIR) {
+                    b.setType(Material.SMOOTH_STONE, false);
+                }
+            }
+        }
+        // Place a fence ring around the platform top so player doesn't fall off.
+        for (int dx = -platformRadius - 1; dx <= platformRadius + 1; dx++) {
+            for (int dz = -platformRadius - 1; dz <= platformRadius + 1; dz++) {
+                if (Math.abs(dx) != platformRadius + 1 && Math.abs(dz) != platformRadius + 1) continue;
+                Block b = w.getBlockAt(cx + dx, top + 1, cz + dz);
+                if (b.getType() == Material.AIR) {
+                    b.setType(Material.SPRUCE_FENCE, false);
+                }
+            }
         }
     }
 
@@ -292,23 +336,56 @@ public class MineManager {
     }
 
     /**
-     * Extends the shaft when the mine is upgraded. Only builds the new
-     * lower portion so existing structures aren't disturbed.
+     * Extends the shaft when the mine is upgraded. Builds the new lower
+     * portion (more stone, more walls, and a new bedrock floor at the new
+     * bottom — replacing the old one so the player can dig further).
      */
     public void extendShaft(MineData md, int oldDepth, int newDepth) {
         World w = Bukkit.getWorld(plugin.getConfigManager().worldName());
         if (w == null) return;
-        Material wall = matchMaterial(plugin.getConfigManager().wallBlock(), Material.SMOOTH_STONE);
-        int x = md.getSurfaceX();
-        int z = md.getSurfaceZ();
+        Material wall = matchMaterial(plugin.getConfigManager().wallBlock(), Material.GLASS);
+        Material floor = matchMaterial(plugin.getConfigManager().bottomBlock(), Material.BEDROCK);
+        int cx = md.getSurfaceX();
+        int cz = md.getSurfaceZ();
+        int h = md.halfWidth();
         int oldBottom = md.getSurfaceY() - oldDepth;
         int newBottom = md.getSurfaceY() - newDepth;
+
+        // Clear the old bedrock floor at oldBottom - 1 and replace with stone
+        // so the player can dig through it (it's no longer the bottom).
+        for (int dx = -h; dx <= h; dx++) {
+            for (int dz = -h; dz <= h; dz++) {
+                Block oldFloor = w.getBlockAt(cx + dx, oldBottom - 1, cz + dz);
+                if (oldFloor.getType() == floor) {
+                    oldFloor.setType(Material.STONE, false);
+                }
+            }
+        }
+
+        // Build new shaft section from oldBottom - 1 down to newBottom.
         for (int y = oldBottom - 1; y >= newBottom; y--) {
-            placeWallIfAir(w, x + 1, y, z, wall);
-            placeWallIfAir(w, x - 1, y, z, wall);
-            placeWallIfAir(w, x, y, z + 1, wall);
-            placeWallIfAir(w, x, y, z - 1, wall);
-            w.getBlockAt(x, y, z).setType(Material.STONE, false);
+            for (int dx = -h; dx <= h; dx++) {
+                for (int dz = -h; dz <= h; dz++) {
+                    w.getBlockAt(cx + dx, y, cz + dz).setType(Material.STONE, false);
+                }
+            }
+        }
+
+        // Build glass walls on the new section.
+        for (int y = oldBottom - 1; y >= newBottom - 1; y--) {
+            for (int i = -(h + 1); i <= h + 1; i++) {
+                placeWallIfAir(w, cx + (h + 1), y, cz + i, wall);
+                placeWallIfAir(w, cx - (h + 1), y, cz + i, wall);
+                placeWallIfAir(w, cx + i, y, cz + (h + 1), wall);
+                placeWallIfAir(w, cx + i, y, cz - (h + 1), wall);
+            }
+        }
+
+        // Place a new bedrock floor at newBottom - 1.
+        for (int dx = -h; dx <= h; dx++) {
+            for (int dz = -h; dz <= h; dz++) {
+                w.getBlockAt(cx + dx, newBottom - 1, cz + dz).setType(floor, false);
+            }
         }
     }
 
@@ -349,12 +426,8 @@ public class MineManager {
         pd.setMineDepth(plugin.getConfigManager().startDepth());
         MineData md = getMineByOwner(uuid);
         if (md != null) {
-            int oldDepth = md.getDepth();
-            int newDepth = plugin.getConfigManager().startDepth();
             md.setLevel(1);
-            md.setDepth(newDepth);
-            // Rebuild the shaft to fresh state. Easiest: build the whole shaft again
-            // overwriting contents.
+            md.setDepth(plugin.getConfigManager().startDepth());
             buildShaft(md);
         }
     }
@@ -374,23 +447,23 @@ public class MineManager {
         pd.getWorkers().clear();
         pd.setWorkingForMine(null);
         if (md != null) {
-            // Clear out the physical shaft too.
             World w = Bukkit.getWorld(plugin.getConfigManager().worldName());
             if (w != null) {
-                int x = md.getSurfaceX();
-                int z = md.getSurfaceZ();
+                int cx = md.getSurfaceX();
+                int cz = md.getSurfaceZ();
+                int h = md.halfWidth();
                 int top = md.getSurfaceY();
                 int bottom = md.getBottomY();
-                for (int y = top + 1; y >= bottom - 2; y--) {
-                    w.getBlockAt(x, y, z).setType(Material.AIR, false);
-                    w.getBlockAt(x + 1, y, z).setType(Material.AIR, false);
-                    w.getBlockAt(x - 1, y, z).setType(Material.AIR, false);
-                    w.getBlockAt(x, y, z + 1).setType(Material.AIR, false);
-                    w.getBlockAt(x, y, z - 1).setType(Material.AIR, false);
+                // Clear shaft, walls, and platform.
+                for (int y = top + 2; y >= bottom - 2; y--) {
+                    for (int dx = -(h + 2); dx <= h + 2; dx++) {
+                        for (int dz = -(h + 2); dz <= h + 2; dz++) {
+                            w.getBlockAt(cx + dx, y, cz + dz).setType(Material.AIR, false);
+                        }
+                    }
                 }
             }
         }
-        // Also clear from YAML config.
         if (minesConfig != null) minesConfig.set("mines." + key, null);
     }
 

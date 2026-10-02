@@ -1,7 +1,6 @@
 package com.example.deepdigger.listeners;
 
 import com.example.deepdigger.DeepDiggerPlugin;
-import com.example.deepdigger.gui.GuiManager;
 import com.example.deepdigger.managers.MessageManager;
 import com.example.deepdigger.models.MineData;
 import com.example.deepdigger.models.PickaxeType;
@@ -14,6 +13,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Map;
 
@@ -36,8 +37,13 @@ public class BlockBreakListener implements Listener {
         if (md == null) {
             return; // Block is outside any mine — let Bukkit handle it normally.
         }
-        // Block is part of a mine. Walls can never be broken.
+        // Block is part of a mine. Walls (glass) and bottom (bedrock) can never be broken.
         if (md.isWall(b.getX(), b.getY(), b.getZ())) {
+            e.setCancelled(true);
+            plugin.getMessageManager().send(p, "cannot-break-wall");
+            return;
+        }
+        if (md.isBottom(b.getX(), b.getY(), b.getZ())) {
             e.setCancelled(true);
             plugin.getMessageManager().send(p, "cannot-break-wall");
             return;
@@ -60,7 +66,6 @@ public class BlockBreakListener implements Listener {
         // Determine depth and the block material currently broken.
         int depth = md.depthAt(b.getY());
         if (depth < 0 || depth > md.getDepth()) {
-            // Out of bounds — reset block visually if needed and bail.
             return;
         }
 
@@ -82,9 +87,8 @@ public class BlockBreakListener implements Listener {
         // Damage pickaxe by 1 if it's a Deep Digger pickaxe.
         ItemStack inHand = p.getInventory().getItemInMainHand();
         PickaxeType heldType = plugin.getPickaxeManager().typeOf(inHand);
-        if (heldType != null && inHand.getItemMeta() instanceof org.bukkit.inventory.meta.Damageable) {
-            org.bukkit.inventory.meta.Damageable dmg =
-                    (org.bukkit.inventory.meta.Damageable) inHand.getItemMeta();
+        if (heldType != null && inHand.getItemMeta() instanceof Damageable) {
+            Damageable dmg = (Damageable) inHand.getItemMeta();
             int current = dmg.getDamage();
             int maxDmg = inHand.getType().getMaxDurability();
             if (current + 1 >= maxDmg) {
@@ -94,6 +98,11 @@ public class BlockBreakListener implements Listener {
                 // Revert to WOOD in player data.
                 PlayerData pd = plugin.getMineManager().get(p.getUniqueId());
                 if (pd != null) pd.setPickaxe(PickaxeType.WOOD);
+                // Auto-give the player a fresh wooden pickaxe so they can keep
+                // playing. The starter pickaxe is intentionally weak so the
+                // player still wants to upgrade.
+                ItemStack fresh = plugin.getPickaxeManager().buildPickaxe(PickaxeType.WOOD);
+                p.getInventory().addItem(fresh);
             } else {
                 dmg.setDamage(current + 1);
                 inHand.setItemMeta(dmg);
