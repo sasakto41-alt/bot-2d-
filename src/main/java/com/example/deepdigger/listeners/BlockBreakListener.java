@@ -152,5 +152,61 @@ public class BlockBreakListener implements Listener {
 
         // Set block to air visually.
         b.setType(Material.AIR, false);
+
+        // Random events — 1% chance per mined block. Per user request,
+        // we trigger one of two events:
+        //   "Старая кирка" — pickaxe damage +20 (closer to breaking).
+        //   "Лавина"        — knockback the player and deal 10 HP damage.
+        triggerRandomEvent(p, b, inHand);
+    }
+
+    private void triggerRandomEvent(Player p, org.bukkit.block.Block b, ItemStack inHand) {
+        if (Math.random() >= 0.01) return; // 1% chance.
+        // Pick one of the two events.
+        boolean eventIsOldPickaxe = Math.random() < 0.5;
+        if (eventIsOldPickaxe) {
+            // Old pickaxe — increase damage by +20.
+            PickaxeType heldType = plugin.getPickaxeManager().typeOf(inHand);
+            if (heldType != null && inHand.getItemMeta() instanceof Damageable) {
+                Damageable dmg = (Damageable) inHand.getItemMeta();
+                int current = dmg.getDamage();
+                int maxDmg = inHand.getType().getMaxDurability();
+                int newDamage = current + 20;
+                if (newDamage >= maxDmg) {
+                    // Pickaxe breaks.
+                    p.getInventory().setItemInMainHand(null);
+                    p.playSound(p.getLocation(), Sound.ENTITY_ITEM_BREAK, 1f, 0.8f);
+                    PlayerData pd = plugin.getMineManager().get(p.getUniqueId());
+                    if (pd != null) pd.setPickaxe(PickaxeType.WOOD);
+                    ItemStack fresh = plugin.getPickaxeManager().buildPickaxe(PickaxeType.WOOD);
+                    p.getInventory().addItem(fresh);
+                    plugin.getMessageManager().sendRaw(p,
+                            plugin.getMessageManager().raw("prefix")
+                                    + "&cСтарая кирка! Ваша кирка сломалась. "
+                                    + "&7Выдана новая деревянная.");
+                } else {
+                    dmg.setDamage(newDamage);
+                    inHand.setItemMeta(dmg);
+                    plugin.getMessageManager().sendRaw(p,
+                            plugin.getMessageManager().raw("prefix")
+                                    + "&cСтарая кирка! +20 урона вашей кирке.");
+                }
+                p.playSound(p.getLocation(), Sound.ENTITY_ITEM_BREAK, 0.7f, 1.2f);
+            }
+        } else {
+            // Avalanche — knockback + 10 damage.
+            org.bukkit.util.Vector dir = p.getLocation().getDirection().multiply(-0.8);
+            dir.setY(0.4);
+            p.setVelocity(dir);
+            p.damage(10.0);
+            plugin.getMessageManager().sendRaw(p,
+                    plugin.getMessageManager().raw("prefix")
+                            + "&cЛавина! Вы получили 10 урона и были отброшены.");
+            p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.7f, 0.6f);
+            b.getWorld().spawnParticle(
+                    org.bukkit.Particle.CAMPFIRE_COSY_SMOKE,
+                    b.getLocation().clone().add(0.5, 0.5, 0.5),
+                    30, 0.4, 0.4, 0.4, 0.1);
+        }
     }
 }

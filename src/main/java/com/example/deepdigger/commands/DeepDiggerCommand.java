@@ -56,6 +56,7 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
             case "deny": return deny(sender);
             case "kick": return kick(sender, args);
             case "members": return members(sender);
+            case "leave": return leave(sender);
             case "notify":
             case "notifications":
                 return notify(sender, args);
@@ -79,6 +80,7 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
         sendHelpLine(sender, "deepdigger deny", "Отклонить приглашение");
         sendHelpLine(sender, "deepdigger kick <ник>", "Исключить работника");
         sendHelpLine(sender, "deepdigger members", "Список работников");
+        sendHelpLine(sender, "deepdigger leave", "Уволиться с работы в чужой шахте");
         sendHelpLine(sender, "deepdigger notify <on|off>", "Включить/выключить уведомления о добыче");
         sendHelpLine(sender, "deepdigger admin", "Админ-команды");
         plugin.getMessageManager().sendRaw(sender, plugin.getMessageManager().raw("help-footer"));
@@ -252,6 +254,56 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
             plugin.getMessageManager().sendRaw(p,
                     plugin.getMessageManager().raw("worker-list-entry", "player", name));
         }
+        return true;
+    }
+
+    private boolean leave(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            plugin.getMessageManager().send(sender, "player-only");
+            return true;
+        }
+        Player p = (Player) sender;
+        if (!p.hasPermission("deepdigger.use")) {
+            plugin.getMessageManager().send(p, "no-permission");
+            return true;
+        }
+        PlayerData pd = plugin.getMineManager().getOrCreate(p.getUniqueId(), p.getName());
+        if (pd == null) {
+            plugin.getMessageManager().send(p, "no-mine");
+            return true;
+        }
+        if (pd.getWorkingForMine() == null) {
+            plugin.getMessageManager().sendRaw(p,
+                    plugin.getMessageManager().raw("prefix")
+                            + "&7Вы сейчас не работаете ни в одной шахте.");
+            return true;
+        }
+        String mineKey = pd.getWorkingForMine();
+        com.example.deepdigger.models.MineData md = plugin.getMineManager().getMine(mineKey);
+        if (md != null) {
+            PlayerData owner = plugin.getMineManager().get(md.getOwner());
+            if (owner != null) {
+                owner.getWorkers().remove(p.getUniqueId());
+                Player ownerOnline = Bukkit.getPlayer(owner.getUuid());
+                if (ownerOnline != null) {
+                    plugin.getMessageManager().sendRaw(ownerOnline,
+                            plugin.getMessageManager().raw("prefix")
+                                    + "&7Работник &f" + p.getName() + " &7покинул вашу шахту.");
+                }
+            }
+        }
+        pd.setWorkingForMine(null);
+        plugin.getMessageManager().sendRaw(p,
+                plugin.getMessageManager().raw("prefix")
+                        + "&aВы покинули работу в чужой шахте.");
+        // Teleport the player to their own mine on the next tick.
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            com.example.deepdigger.models.MineData own =
+                    plugin.getMineManager().getMineByOwner(p.getUniqueId());
+            if (own != null) {
+                p.teleport(plugin.getMineManager().surfaceLocation(own));
+            }
+        }, 1L);
         return true;
     }
 
@@ -430,7 +482,7 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
             String[] subs = {"help","menu","money","mine","upgrade","teleport","invite",
-                    "accept","deny","kick","members","notify","admin"};
+                    "accept","deny","kick","members","leave","notify","admin"};
             for (String s : subs) {
                 if (s.startsWith(args[0].toLowerCase())) out.add(s);
             }

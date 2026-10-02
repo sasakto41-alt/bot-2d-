@@ -23,6 +23,7 @@ public class PlayerData {
     private List<UUID> workers;      // workers of THIS player's mine
     private String workingForMine;  // if non-null, this player works in someone else's mine
     private boolean notificationsEnabled = true;
+    private long lastDailyBonus = 0L;
 
     public PlayerData() {
         this.balance = 0.0;
@@ -71,6 +72,9 @@ public class PlayerData {
     public void setNotificationsEnabled(boolean notificationsEnabled) {
         this.notificationsEnabled = notificationsEnabled;
     }
+
+    public long getLastDailyBonus() { return lastDailyBonus; }
+    public void setLastDailyBonus(long lastDailyBonus) { this.lastDailyBonus = lastDailyBonus; }
 
     @Override
     public String toString() {

@@ -65,5 +65,26 @@ public class PlayerJoinListener implements Listener {
             }, 1L);
         }
         plugin.getHudManager().apply(e.getPlayer());
+
+        // Daily login bonus — paid out once per 24 hours.
+        tryDailyBonus(e.getPlayer(), pd);
+    }
+
+    private void tryDailyBonus(org.bukkit.entity.Player player, PlayerData pd) {
+        if (pd == null) return;
+        long now = System.currentTimeMillis();
+        long last = pd.getLastDailyBonus();
+        if (last > 0 && (now - last) < 24L * 60L * 60L * 1000L) {
+            // Less than 24 hours since last bonus — skip.
+            return;
+        }
+        // Award a random bonus between $50 and $200.
+        int amount = 50 + (int) (Math.random() * 151); // 50..200
+        pd.setBalance(pd.getBalance() + amount);
+        pd.setLastDailyBonus(now);
+        plugin.getMessageManager().sendRaw(player,
+                plugin.getMessageManager().raw("prefix")
+                        + "&aЕжедневный бонус: &f+$" + amount);
+        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 1.6f);
     }
 }

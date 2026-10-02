@@ -76,9 +76,37 @@ public class PickaxeManager {
             meta.getPersistentDataContainer().set(pickaxeKey, PersistentDataType.STRING, type.name());
             meta.getPersistentDataContainer().set(tierKey, PersistentDataType.INTEGER, type.tier());
             meta.getPersistentDataContainer().set(durabilityKey, PersistentDataType.INTEGER, durability);
+            applyEnchantments(meta, type);
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    /**
+     * Adds enchantments to the pickaxe based on its tier:
+     *   STONE   — Silk Touch
+     *   IRON    — Fortune I
+     *   DIAMOND — Fortune III + Efficiency II
+     *
+     * Enchantments are applied with unsafe=true so we can bypass vanilla
+     * level limits.
+     */
+    private void applyEnchantments(org.bukkit.inventory.meta.ItemMeta meta, PickaxeType type) {
+        if (meta == null) return;
+        switch (type) {
+            case STONE:
+                meta.addEnchant(Enchantment.SILK_TOUCH, 1, true);
+                break;
+            case IRON:
+                meta.addEnchant(Enchantment.LOOT_BONUS_BLOCKS, 1, true);
+                break;
+            case DIAMOND:
+                meta.addEnchant(Enchantment.LOOT_BONUS_BLOCKS, 3, true);
+                meta.addEnchant(Enchantment.DIG_SPEED, 2, true);
+                break;
+            default:
+                break;
+        }
     }
 
     public PickaxeType typeOf(ItemStack item) {

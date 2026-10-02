@@ -32,6 +32,7 @@ public class DeepDiggerPlugin extends JavaPlugin {
     private HudUpdateTask hudUpdateTask;
     private DarknessTask darknessTask;
     private SaveTask saveTask;
+    private HealTask healTask;
 
     @Override
     public void onEnable() {
@@ -85,6 +86,9 @@ public class DeepDiggerPlugin extends JavaPlugin {
         saveTask = new SaveTask(this);
         saveTask.runTaskTimer(this, configManager.autosaveSeconds() * 20L,
                 configManager.autosaveSeconds() * 20L);
+        // Auto-heal players on their own mine's platform. Every second = 20 ticks.
+        healTask = new HealTask(this);
+        healTask.runTaskTimer(this, 20L, 20L);
 
         // Create a mine for everyone who has no mine (recovered data on startup).
         for (var p : getServer().getOnlinePlayers()) {
