@@ -4,7 +4,9 @@ import com.example.deepdigger.commands.DeepDiggerCommand;
 import com.example.deepdigger.gui.GuiManager;
 import com.example.deepdigger.listeners.*;
 import com.example.deepdigger.managers.*;
+import com.example.deepdigger.models.MineData;
 import com.example.deepdigger.tasks.*;
+import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -22,6 +24,10 @@ public class DeepDiggerPlugin extends JavaPlugin {
     private WorkerManager workerManager;
     private HudManager hudManager;
     private GuiManager guiManager;
+    private HologramManager hologramManager;
+
+    private NamespacedKey holoActionKey;
+    private NamespacedKey holoMineKey;
 
     private HudUpdateTask hudUpdateTask;
     private DarknessTask darknessTask;
@@ -46,6 +52,9 @@ public class DeepDiggerPlugin extends JavaPlugin {
         workerManager = new WorkerManager(this);
         hudManager = new HudManager(this);
         guiManager = new GuiManager(this);
+        hologramManager = new HologramManager(this);
+        holoActionKey = new NamespacedKey(this, "holo_action");
+        holoMineKey = new NamespacedKey(this, "holo_mine");
 
         // Listeners.
         getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
@@ -57,6 +66,8 @@ public class DeepDiggerPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerInteractListener(this), this);
         getServer().getPluginManager().registerEvents(new InventoryClickListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerSneakListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerInteractAtEntityListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerMoveListener(this), this);
 
         // Command.
         DeepDiggerCommand cmd = new DeepDiggerCommand(this);
@@ -79,6 +90,11 @@ public class DeepDiggerPlugin extends JavaPlugin {
                 messageManager.send(p, "mine-created");
             }
             getHudManager().apply(p);
+        }
+
+        // Re-spawn holograms for all existing mines (they vanish on server stop).
+        for (MineData md : mineManager.all().values()) {
+            hologramManager.spawnFor(md);
         }
 
         getLogger().info("Deep Digger enabled.");
@@ -105,4 +121,7 @@ public class DeepDiggerPlugin extends JavaPlugin {
     public WorkerManager getWorkerManager() { return workerManager; }
     public HudManager getHudManager() { return hudManager; }
     public GuiManager getGuiManager() { return guiManager; }
+    public HologramManager getHologramManager() { return hologramManager; }
+    public NamespacedKey getHoloActionKey() { return holoActionKey; }
+    public NamespacedKey getHoloMineKey() { return holoMineKey; }
 }

@@ -113,10 +113,10 @@ public class BlockBreakListener implements Listener {
         PlayerData pd = plugin.getMineManager().getOrCreate(p.getUniqueId(), p.getName());
         plugin.getEconomyManager().payMiningReward(pd, reward);
 
-        // Drop the ore as an item.
-        if (dropMat != null && dropMat != Material.AIR) {
-            b.getWorld().dropItemNaturally(b.getLocation(), new ItemStack(dropMat));
-        }
+        // NOTE: no item drop. The user explicitly requested that breaking a
+        // block does not produce any inventory loot — money is added
+        // directly to the balance instead. This avoids inventory clutter
+        // and keeps the gameplay loop focused on currency accumulation.
 
         // Particles + sound.
         if (plugin.getOreManager().isRare(currentBlock) || "алмаз".equals(displayName)

@@ -311,14 +311,22 @@ public class MineManager {
             }
         }
         // Place a fence ring around the platform top so player doesn't fall off.
-        for (int dx = -platformRadius - 1; dx <= platformRadius + 1; dx++) {
-            for (int dz = -platformRadius - 1; dz <= platformRadius + 1; dz++) {
-                if (Math.abs(dx) != platformRadius + 1 && Math.abs(dz) != platformRadius + 1) continue;
-                Block b = w.getBlockAt(cx + dx, top + 1, cz + dz);
-                if (b.getType() == Material.AIR) {
-                    b.setType(Material.SPRUCE_FENCE, false);
+        // Two blocks tall so they can't jump over.
+        for (int dy = 0; dy <= 1; dy++) {
+            for (int dx = -platformRadius - 1; dx <= platformRadius + 1; dx++) {
+                for (int dz = -platformRadius - 1; dz <= platformRadius + 1; dz++) {
+                    if (Math.abs(dx) != platformRadius + 1 && Math.abs(dz) != platformRadius + 1) continue;
+                    Block b = w.getBlockAt(cx + dx, top + 1 + dy, cz + dz);
+                    if (b.getType() == Material.AIR) {
+                        b.setType(Material.SPRUCE_FENCE, false);
+                    }
                 }
             }
+        }
+
+        // Spawn holograms on top of the fence (player can right-click them).
+        if (plugin.getHologramManager() != null) {
+            plugin.getHologramManager().spawnFor(md);
         }
     }
 
@@ -447,6 +455,10 @@ public class MineManager {
         pd.getWorkers().clear();
         pd.setWorkingForMine(null);
         if (md != null) {
+            // Remove holograms first.
+            if (plugin.getHologramManager() != null) {
+                plugin.getHologramManager().removeAllFor(md);
+            }
             World w = Bukkit.getWorld(plugin.getConfigManager().worldName());
             if (w != null) {
                 int cx = md.getSurfaceX();
@@ -470,5 +482,37 @@ public class MineManager {
     public Location surfaceLocation(MineData md) {
         World w = Bukkit.getWorld(plugin.getConfigManager().worldName());
         return new Location(w, md.getSurfaceX() + 0.5, md.getSurfaceY() + 1, md.getSurfaceZ() + 0.5);
+    }
+
+    /**
+     * Instantly regenerates every block in the shaft: every block from the
+     * surface down to the bottom becomes either stone or ore based on its
+     * depth. Pending regen entries for blocks in the shaft are cancelled.
+     * Triggered by the "Обновить шахту" hologram.
+     */
+    public void refreshMine(MineData md) {
+        if (md == null) return;
+        World w = Bukkit.getWorld(plugin.getConfigManager().worldName());
+        if (w == null) return;
+        int cx = md.getSurfaceX();
+        int cz = md.getSurfaceZ();
+        int h = md.halfWidth();
+        int top = md.getSurfaceY();
+        int bottom = md.getBottomY();
+        // Iterate every block in the shaft column.
+        for (int y = top - 1; y >= bottom; y--) {
+            for (int dx = -h; dx <= h; dx++) {
+                for (int dz = -h; dz <= h; dz++) {
+                    Block b = w.getBlockAt(cx + dx, y, cz + dz);
+                    int depth = md.depthAt(y);
+                    if (depth < 0 || depth > md.getDepth()) continue;
+                    // Clear pending regen for this block so the regen task
+                    // doesn't fight with us over it.
+                    plugin.getRegenManager().clearPending(b.getLocation());
+                    Material newMat = pickOreForDepth(depth);
+                    b.setType(newMat, false);
+                }
+            }
+        }
     }
 }

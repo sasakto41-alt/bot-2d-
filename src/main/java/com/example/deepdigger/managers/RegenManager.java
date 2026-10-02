@@ -78,4 +78,8 @@ public class RegenManager {
     public boolean isPending(Location loc) {
         return pending.containsKey(loc);
     }
+
+    public void clearPending(Location loc) {
+        pending.remove(loc);
+    }
 }
