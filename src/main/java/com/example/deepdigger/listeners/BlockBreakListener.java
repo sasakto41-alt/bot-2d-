@@ -48,6 +48,11 @@ public class BlockBreakListener implements Listener {
             plugin.getMessageManager().send(p, "cannot-break-wall");
             return;
         }
+        if (md.isSafeZone(b.getX(), b.getY(), b.getZ())) {
+            e.setCancelled(true);
+            plugin.getMessageManager().send(p, "cannot-break-wall");
+            return;
+        }
         // Block must be inside the shaft.
         if (!md.isInsideShaft(b.getX(), b.getY(), b.getZ())) {
             e.setCancelled(true);

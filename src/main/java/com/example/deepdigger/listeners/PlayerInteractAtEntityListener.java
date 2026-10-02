@@ -67,6 +67,15 @@ public class PlayerInteractAtEntityListener implements Listener {
                         plugin.getMessageManager().raw("prefix")
                                 + "&aШахта обновлена — все блоки восстановлены.");
                 break;
+            case TELEPORT_TOP:
+                // Teleport the player back to the surface of this mine.
+                org.bukkit.Location loc = plugin.getMineManager().surfaceLocation(md);
+                p.teleport(loc);
+                p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.2f);
+                plugin.getMessageManager().sendRaw(p,
+                        plugin.getMessageManager().raw("prefix")
+                                + "&aТелепорт на поверхность.");
+                break;
         }
     }
 }

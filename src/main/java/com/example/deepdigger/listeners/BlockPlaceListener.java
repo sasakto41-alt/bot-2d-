@@ -31,7 +31,8 @@ public class BlockPlaceListener implements Listener {
         boolean insideShaft = md.isInsideShaft(b.getX(), b.getY(), b.getZ());
         boolean isWall = md.isWall(b.getX(), b.getY(), b.getZ());
         boolean isBottom = md.isBottom(b.getX(), b.getY(), b.getZ());
-        if (insideShaft || isWall || isBottom) {
+        boolean isSafeZone = md.isSafeZone(b.getX(), b.getY(), b.getZ());
+        if (insideShaft || isWall || isBottom || isSafeZone) {
             // Torch placement allowed on walls or inside shaft.
             if (b.getType() == Material.TORCH || b.getType() == Material.WALL_TORCH) {
                 if (!plugin.getMineManager().hasAccess(e.getPlayer().getUniqueId(), md)) {

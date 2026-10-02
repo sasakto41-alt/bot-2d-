@@ -93,6 +93,12 @@ public class MineData {
         return y == getBottomY() - 1;
     }
 
+    /** True if the block is the unbreakable center block on the platform top
+     *  (the safe-zone spawn / teleport target). */
+    public boolean isSafeZone(int x, int y, int z) {
+        return x == surfaceX && z == surfaceZ && y == surfaceY;
+    }
+
     /** Depth at a given Y inside the shaft (0 at surface). */
     public int depthAt(int y) {
         return surfaceY - y;

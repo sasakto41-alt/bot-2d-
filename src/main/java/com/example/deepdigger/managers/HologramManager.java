@@ -33,7 +33,7 @@ public class HologramManager {
 
     public static final String PREFIX = "dd_holo_";
 
-    public enum Action { MENU, UPGRADE, PICKAXE, REFRESH_MINE }
+    public enum Action { MENU, UPGRADE, PICKAXE, REFRESH_MINE, TELEPORT_TOP }
 
     private final DeepDiggerPlugin plugin;
 
@@ -42,8 +42,11 @@ public class HologramManager {
     }
 
     /**
-     * Removes any existing holograms for the mine and spawns four fresh
-     * ones on the four sides of the platform fence.
+     * Removes any existing holograms for the mine and spawns five fresh
+     * ones. Four sit on the four sides of the platform fence (player can
+     * stand on the platform and right-click them). The fifth hologram
+     * sits at the very bottom of the shaft and teleports the player back
+     * to the surface when clicked.
      */
     public void spawnFor(MineData md) {
         if (md == null) return;
@@ -55,17 +58,23 @@ public class HologramManager {
         int cx = md.getSurfaceX();
         int cz = md.getSurfaceZ();
         int top = md.getSurfaceY();
+        int bottom = md.getBottomY();
         int h = md.halfWidth();
         int platformRadius = h + 1; // fence is one block out from the platform edge
 
         // Place holograms INSIDE the fence ring, at the four cardinal sides
         // of the platform. They float just above the platform surface so the
         // player can stand on the platform and right-click them easily.
-        double y = top + 1.2;
-        spawnOne(w, cx + platformRadius, y, cz,                       md, Action.MENU,         "\u00A76\u00A7l\u26CF МЕНЮ");
-        spawnOne(w, cx - platformRadius, y, cz,                       md, Action.UPGRADE,      "\u00A76\u00A7l\u2B06 УЛУЧШИТЬ");
-        spawnOne(w, cx,                y, cz + platformRadius,        md, Action.PICKAXE,      "\u00A76\u00A7l\u26CF КИРКИ");
-        spawnOne(w, cx,                y, cz - platformRadius,        md, Action.REFRESH_MINE, "\u00A76\u00A7l\u21BB ОБНОВИТЬ ШАХТУ");
+        double surfaceY = top + 1.2;
+        spawnOne(w, cx + platformRadius, surfaceY, cz,                       md, Action.MENU,         "\u00A76\u00A7l\u26CF МЕНЮ");
+        spawnOne(w, cx - platformRadius, surfaceY, cz,                       md, Action.UPGRADE,      "\u00A76\u00A7l\u2B06 УЛУЧШИТЬ");
+        spawnOne(w, cx,                surfaceY, cz + platformRadius,        md, Action.PICKAXE,      "\u00A76\u00A7l\u26CF КИРКИ");
+        spawnOne(w, cx,                surfaceY, cz - platformRadius,        md, Action.REFRESH_MINE, "\u00A76\u00A7l\u21BB ОБНОВИТЬ ШАХТУ");
+
+        // Teleport-to-top hologram at the very bottom of the shaft, in the
+        // middle, floating just above the bedrock floor.
+        double teleportY = bottom + 1.0;
+        spawnOne(w, cx,                teleportY, cz,                        md, Action.TELEPORT_TOP, "\u00A7a\u00A7l\u2B06 ТП НА ВЕРХ");
     }
 
     private void spawnOne(World w, int x, double y, int z, MineData md, Action action, String display) {
@@ -78,7 +87,10 @@ public class HologramManager {
             as.setCustomName(display);
             as.setCustomNameVisible(true);
             as.setGravity(false);
-            as.setMarker(true);
+            // CRITICAL: marker=true means the stand has no hitbox at all,
+            // so it cannot be clicked by players. Setting marker=false gives
+            // it a small hitbox that PlayerInteractAtEntityEvent can fire on.
+            as.setMarker(false);
             as.setInvulnerable(true);
             as.setCollidable(false);
             as.setSmall(true);

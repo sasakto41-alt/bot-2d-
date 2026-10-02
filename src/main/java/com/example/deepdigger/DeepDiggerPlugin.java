@@ -48,7 +48,10 @@ public class DeepDiggerPlugin extends JavaPlugin {
         pickaxeManager.init();
         oreManager = new OreManager(this);
         regenManager = new RegenManager(this);
-        regenManager.start();
+        // Auto-regen is disabled per user request. The only way blocks come
+        // back is by clicking the "Обновить шахту" hologram, which calls
+        // MineManager.refreshMine().
+        // regenManager.start();
         workerManager = new WorkerManager(this);
         hudManager = new HudManager(this);
         guiManager = new GuiManager(this);

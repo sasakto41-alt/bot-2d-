@@ -189,7 +189,8 @@ public class MineManager {
 
     public MineData getMineAt(int x, int y, int z) {
         for (MineData md : mines.values()) {
-            if (md.isInsideShaft(x, y, z) || md.isWall(x, y, z) || md.isBottom(x, y, z)) {
+            if (md.isInsideShaft(x, y, z) || md.isWall(x, y, z)
+                    || md.isBottom(x, y, z) || md.isSafeZone(x, y, z)) {
                 return md;
             }
         }
@@ -291,6 +292,10 @@ public class MineManager {
                 w.getBlockAt(cx + dx, top, cz + dz).setType(surf, false);
             }
         }
+        // Place an unbreakable "safe zone" block in the very center of the
+        // platform top — the spawn / teleport target that can never be dug
+        // out, so the player always has somewhere safe to stand on.
+        w.getBlockAt(cx, top, cz).setType(floor, false); // bedrock
         // Open the surface so player can dig down: clear the center 3x3 below the cap.
         // Wait, the cap is AT top, and the shaft starts BELOW the cap. That's fine.
 
