@@ -8,22 +8,23 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 
 /**
  * Prevents a player from leaving the safe zone of their mine (or a mine
  * they're working in). The safe zone is:
  *
- *   - the 3x3 shaft column at any y inside the shaft, OR
- *   - the platform ring at surface level (so they can stand on top and
- *     use the holograms), OR
- *   - the air directly above the platform (for jumps)
+ *   - the 3x3 shaft column at any y inside the shaft
+ *   - the platform top + an air column above (so they can jump without
+ *     getting pulled), bounded horizontally to the fence ring radius
  *
  * If a player would move to a location outside the safe zone while their
- * mine is loaded, the move is cancelled. The player is gently teleported
- * back to a safe spot when they fell off.
+ * mine is loaded, the move is cancelled. Teleports that try to land near
+ * the mine but outside the safe zone are also cancelled and the player
+ * is snapped back to the surface.
  *
- * This check only fires when the player crosses a block boundary so it
- * stays cheap.
+ * The move check only fires when the player crosses a block boundary so
+ * it stays cheap.
  */
 public class PlayerMoveListener implements Listener {
 
@@ -44,7 +45,44 @@ public class PlayerMoveListener implements Listener {
                 && from.getBlockY() == to.getBlockY()
                 && from.getBlockZ() == to.getBlockZ()) return;
 
-        // Find the player's mine (own, or worker).
+        MineData md = findMine(p);
+        if (md == null) return;
+
+        if (isInsideSafeZone(md, to)) return;
+
+        // Out of bounds. Cancel the move and teleport to a safe spot.
+        e.setCancelled(true);
+        // If they fell far below the platform, teleport them up to the surface.
+        if (to.getBlockY() < md.getSurfaceY() - 5) {
+            p.teleport(plugin.getMineManager().surfaceLocation(md));
+        }
+    }
+
+    /**
+     * Catches teleport-based escapes (ender pearls, chorus fruit, admin
+     * teleports to outside the safe zone, etc).
+     */
+    @EventHandler
+    public void onTeleport(PlayerTeleportEvent e) {
+        if (e.getTo() == null) return;
+        Player p = e.getPlayer();
+        MineData md = findMine(p);
+        if (md == null) return;
+        // If player is teleporting TO a location that's inside the safe zone,
+        // allow it.
+        if (isInsideSafeZone(md, e.getTo())) return;
+        // If the destination is far from the mine (more than 50 blocks
+        // horizontally), assume the player is leaving the mine intentionally
+        // (e.g., /spawn) and allow it.
+        int dx = e.getTo().getBlockX() - md.getSurfaceX();
+        int dz = e.getTo().getBlockZ() - md.getSurfaceZ();
+        if (Math.abs(dx) > 50 || Math.abs(dz) > 50) return;
+        // Otherwise cancel and snap them back to the surface.
+        e.setCancelled(true);
+        p.teleport(plugin.getMineManager().surfaceLocation(md));
+    }
+
+    private MineData findMine(Player p) {
         MineData md = plugin.getMineManager().getMineByOwner(p.getUniqueId());
         if (md == null) {
             PlayerData pd = plugin.getMineManager().get(p.getUniqueId());
@@ -52,16 +90,7 @@ public class PlayerMoveListener implements Listener {
                 md = plugin.getMineManager().getMine(pd.getWorkingForMine());
             }
         }
-        if (md == null) return;
-
-        if (isInsideSafeZone(md, to)) return;
-
-        // Out of bounds. Cancel the move.
-        e.setCancelled(true);
-        // If they're below the platform, push them back up to the surface.
-        if (to.getBlockY() < md.getSurfaceY()) {
-            p.teleport(plugin.getMineManager().surfaceLocation(md));
-        }
+        return md;
     }
 
     private boolean isInsideSafeZone(MineData md, Location loc) {
@@ -70,8 +99,7 @@ public class PlayerMoveListener implements Listener {
         int h = md.halfWidth();
         int top = md.getSurfaceY();
         int bottom = md.getBottomY();
-        int platformRadius = h + 1; // platform extends from -h-1 to h+1
-        int fenceRadius = h + 2;    // fence ring
+        int fenceRadius = h + 2;
 
         int dx = loc.getBlockX() - cx;
         int dz = loc.getBlockZ() - cz;
@@ -80,20 +108,16 @@ public class PlayerMoveListener implements Listener {
         int maxd = Math.max(adx, adz);
         int y = loc.getBlockY();
 
-        // Inside the shaft column at any valid shaft Y (or slightly above
-        // the surface so they can jump in the air without getting pulled).
-        if (adx <= h && adz <= h && y >= bottom - 1 && y <= top + 3) {
-            return true;
+        // Above the platform (or on the platform top) — strictly bounded to
+        // the fence ring so the player cannot jump over the fence.
+        if (y >= top) {
+            return maxd <= fenceRadius;
         }
-        // On the platform top (between the shaft and the fence).
-        if (maxd <= fenceRadius && y >= top && y <= top + 3) {
-            return true;
+        // Inside the shaft column.
+        if (y >= bottom - 1 && y < top) {
+            return adx <= h && adz <= h;
         }
-        // Slightly below the platform top (so you don't get pulled when
-        // standing on a slightly-low block).
-        if (maxd <= fenceRadius && y == top - 1 && y >= bottom - 2) {
-            return true;
-        }
+        // Below the bedrock floor — they shouldn't be here. Block it.
         return false;
     }
 }

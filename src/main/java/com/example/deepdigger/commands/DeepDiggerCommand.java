@@ -272,12 +272,49 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
                 return adminReset(sender, args);
             case "delete":
                 return adminDelete(sender, args);
+            case "recreate":
+                return adminRecreate(sender, args);
             case "tp":
                 return adminTp(sender, args);
             default:
-                plugin.getMessageManager().sendRaw(sender, "&6/deepdigger admin <create|reset|delete|tp|reload> <player>");
+                plugin.getMessageManager().sendRaw(sender, "&6/deepdigger admin <create|recreate|reset|delete|tp|reload> <player>");
                 return true;
         }
+    }
+
+    private boolean adminRecreate(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("deepdigger.admin")) {
+            plugin.getMessageManager().send(sender, "no-permission");
+            return true;
+        }
+        if (args.length < 3) {
+            plugin.getMessageManager().sendRaw(sender, "&c/deepdigger admin recreate <player>");
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[2]);
+        if (target == null) {
+            plugin.getMessageManager().send(sender, "player-not-found");
+            return true;
+        }
+        // Delete existing mine (if any) then create a fresh one.
+        plugin.getMineManager().deleteMine(target.getUniqueId());
+        MineData md = plugin.getMineManager().createMineFor(target.getUniqueId(),
+                target.getName() == null ? args[2] : target.getName());
+        plugin.getMessageManager().sendRaw(sender,
+                plugin.getMessageManager().raw("prefix")
+                        + "&aШахта игрока &f" + args[2] + " &aпересоздана на координатах &f("
+                        + md.getSurfaceX() + ", " + md.getSurfaceY() + ", " + md.getSurfaceZ() + ")");
+        // If sender is a player, teleport them to the new mine.
+        if (sender instanceof Player) {
+            ((Player) sender).teleport(plugin.getMineManager().surfaceLocation(md));
+        }
+        // If target is online, teleport them too.
+        Player targetOnline = Bukkit.getPlayerExact(args[2]);
+        if (targetOnline != null) {
+            targetOnline.teleport(plugin.getMineManager().surfaceLocation(md));
+            plugin.getMessageManager().send(targetOnline, "mine-created");
+        }
+        return true;
     }
 
     private boolean adminCreate(CommandSender sender, String[] args) {
@@ -362,7 +399,7 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
                 if (s.startsWith(args[0].toLowerCase())) out.add(s);
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("admin")) {
-            for (String s : Arrays.asList("create","reset","delete","tp","reload")) {
+            for (String s : Arrays.asList("create","recreate","reset","delete","tp","reload")) {
                 if (s.startsWith(args[1].toLowerCase())) out.add(s);
             }
         } else if (args.length == 3 && args[0].equalsIgnoreCase("admin")) {
