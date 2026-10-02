@@ -113,6 +113,7 @@ public class MineManager {
                 }
                 pd.setMineKey(p.getString("mineKey", null));
                 pd.setWorkingForMine(p.getString("workingForMine", null));
+                pd.setNotificationsEnabled(p.getBoolean("notificationsEnabled", true));
                 java.util.List<UUID> workers = new java.util.ArrayList<>();
                 for (String w : p.getStringList("workers")) {
                     try { workers.add(UUID.fromString(w)); } catch (IllegalArgumentException ignored) {}
@@ -144,6 +145,7 @@ public class MineManager {
             playersConfig.set(path + ".pickaxe", pd.getPickaxe().name());
             playersConfig.set(path + ".mineKey", pd.getMineKey());
             playersConfig.set(path + ".workingForMine", pd.getWorkingForMine());
+            playersConfig.set(path + ".notificationsEnabled", pd.isNotificationsEnabled());
             java.util.List<String> workers = new java.util.ArrayList<>();
             for (UUID w : pd.getWorkers()) {
                 workers.add(w.toString());

@@ -56,6 +56,9 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
             case "deny": return deny(sender);
             case "kick": return kick(sender, args);
             case "members": return members(sender);
+            case "notify":
+            case "notifications":
+                return notify(sender, args);
             case "admin": return admin(sender, args);
             default:
                 plugin.getMessageManager().send(sender, "unknown-command");
@@ -76,6 +79,7 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
         sendHelpLine(sender, "deepdigger deny", "Отклонить приглашение");
         sendHelpLine(sender, "deepdigger kick <ник>", "Исключить работника");
         sendHelpLine(sender, "deepdigger members", "Список работников");
+        sendHelpLine(sender, "deepdigger notify <on|off>", "Включить/выключить уведомления о добыче");
         sendHelpLine(sender, "deepdigger admin", "Админ-команды");
         plugin.getMessageManager().sendRaw(sender, plugin.getMessageManager().raw("help-footer"));
         return true;
@@ -251,6 +255,38 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private boolean notify(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            plugin.getMessageManager().send(sender, "player-only");
+            return true;
+        }
+        Player p = (Player) sender;
+        PlayerData pd = plugin.getMineManager().getOrCreate(p.getUniqueId(), p.getName());
+        if (pd == null) return true;
+        boolean newState;
+        if (args.length < 2) {
+            // Toggle.
+            newState = !pd.isNotificationsEnabled();
+        } else {
+            String mode = args[1].toLowerCase();
+            switch (mode) {
+                case "on":  case "true":  case "1":  case "yes": newState = true; break;
+                case "off": case "false": case "0":  case "no":  newState = false; break;
+                default:
+                    plugin.getMessageManager().sendRaw(p, "&c/deepdigger notify <on|off>");
+                    return true;
+            }
+        }
+        pd.setNotificationsEnabled(newState);
+        String status = newState ? "&aвключены" : "&cвыключены";
+        plugin.getMessageManager().sendRaw(p,
+                plugin.getMessageManager().raw("prefix")
+                        + "&7Уведомления: " + status
+                        + "&7. Спам-сообщения (добыча, деньги) "
+                        + (newState ? "показываются." : "скрыты. Ошибки и команды всё равно видны."));
+        return true;
+    }
+
     private boolean admin(CommandSender sender, String[] args) {
         if (!sender.hasPermission("deepdigger.admin")) {
             plugin.getMessageManager().send(sender, "no-permission");
@@ -394,7 +430,7 @@ public class DeepDiggerCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
             String[] subs = {"help","menu","money","mine","upgrade","teleport","invite",
-                    "accept","deny","kick","members","admin"};
+                    "accept","deny","kick","members","notify","admin"};
             for (String s : subs) {
                 if (s.startsWith(args[0].toLowerCase())) out.add(s);
             }

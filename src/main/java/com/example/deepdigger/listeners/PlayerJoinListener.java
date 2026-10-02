@@ -2,6 +2,7 @@ package com.example.deepdigger.listeners;
 
 import com.example.deepdigger.DeepDiggerPlugin;
 import com.example.deepdigger.models.MineData;
+import com.example.deepdigger.models.PlayerData;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -16,7 +17,28 @@ public class PlayerJoinListener implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
-        // Auto-create or auto-recover the player's mine.
+        PlayerData pd = plugin.getMineManager().getOrCreate(e.getPlayer().getUniqueId(), e.getPlayer().getName());
+
+        // If the player is a worker somewhere, send them to the owner's mine
+        // so they can immediately start digging.
+        if (pd != null && pd.getWorkingForMine() != null) {
+            MineData ownerMine = plugin.getMineManager().getMine(pd.getWorkingForMine());
+            if (ownerMine != null) {
+                // Make sure holograms are spawned for the owner's mine.
+                if (plugin.getHologramManager() != null) {
+                    plugin.getHologramManager().spawnFor(ownerMine);
+                }
+                final MineData finalOwnerMine = ownerMine;
+                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                    e.getPlayer().teleport(plugin.getMineManager().surfaceLocation(finalOwnerMine));
+                }, 1L);
+                plugin.getHudManager().apply(e.getPlayer());
+                return;
+            }
+            // Owner's mine missing — fall through and create the player's own.
+        }
+
+        // Auto-create or auto-recover the player's own mine.
         MineData md = plugin.getMineManager().getMineByOwner(e.getPlayer().getUniqueId());
         if (md == null) {
             // No mine yet — create one and teleport the player to it.
@@ -35,18 +57,12 @@ public class PlayerJoinListener implements Listener {
                 plugin.getHologramManager().spawnFor(md);
             }
         }
-        // Ensure player data is loaded.
-        plugin.getMineManager().getOrCreate(e.getPlayer().getUniqueId(), e.getPlayer().getName());
         // Teleport the player to their mine on every join (per user request).
         if (md != null) {
-            org.bukkit.Location loc = plugin.getMineManager().surfaceLocation(md);
-            if (loc != null && loc.getWorld() != null) {
-                // Delay teleport by one tick so joining player state is ready.
-                final MineData finalMd = md;
-                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                    e.getPlayer().teleport(plugin.getMineManager().surfaceLocation(finalMd));
-                }, 1L);
-            }
+            final MineData finalMd = md;
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                e.getPlayer().teleport(plugin.getMineManager().surfaceLocation(finalMd));
+            }, 1L);
         }
         plugin.getHudManager().apply(e.getPlayer());
     }

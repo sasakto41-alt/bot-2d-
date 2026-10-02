@@ -22,6 +22,7 @@ public class PlayerData {
     private String mineKey;          // logical key of the mine (e.g. "mine_3")
     private List<UUID> workers;      // workers of THIS player's mine
     private String workingForMine;  // if non-null, this player works in someone else's mine
+    private boolean notificationsEnabled = true;
 
     public PlayerData() {
         this.balance = 0.0;
@@ -65,6 +66,11 @@ public class PlayerData {
     public void setWorkingForMine(String workingForMine) { this.workingForMine = workingForMine; }
 
     public boolean isWorker() { return workingForMine != null; }
+
+    public boolean isNotificationsEnabled() { return notificationsEnabled; }
+    public void setNotificationsEnabled(boolean notificationsEnabled) {
+        this.notificationsEnabled = notificationsEnabled;
+    }
 
     @Override
     public String toString() {
