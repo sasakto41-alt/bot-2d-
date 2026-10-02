@@ -1,0 +1,55 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.example'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'papermc-repo'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
+}
+
+// Force Gradle to use our local JDK 17 toolchain.
+project.ext.localJdk17Home = '/home/z/my-project/tools/jdk-17.0.20.1+1'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.fork = true
+    options.forkOptions.javaHome = new File(project.ext.localJdk17Home)
+    options.release = 17
+}
+
+jar {
+    archiveBaseName = 'DeepDigger'
+    archiveVersion = '1.0.0'
+    from sourceSets.main.output
+    from('src/main/resources') {
+        include 'plugin.yml'
+        include 'config.yml'
+        include 'messages.yml'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+build {
+    dependsOn jar
+}

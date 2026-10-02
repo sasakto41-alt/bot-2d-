@@ -1,0 +1,161 @@
+# ============================================================
+#                  DEEP DIGGER CONFIGURATION
+# ============================================================
+
+# World where personal mines live. World must already exist.
+world:
+  name: "world"
+  # Spacing between mines along the X axis (blocks). Must be >= 4.
+  spacing-x: 100
+  # Spacing along the Z axis (blocks). Used as offset per row.
+  spacing-z: 0
+  # Starting surface Y (where the player stands at the entrance).
+  surface-y: 64
+
+# Mine sizing rules. Width is always 1 block and only grows downward.
+mine:
+  start-depth: 30
+  max-workers: 5
+  # Hard cap on depth so the world doesn't break.
+  absolute-max-depth: 320
+
+  # Level -> depth / price mapping. Level 1 is the free starting level.
+  upgrades:
+    2:
+      depth: 50
+      price: 1000
+    3:
+      depth: 75
+      price: 2500
+    4:
+      depth: 100
+      price: 5000
+    5:
+      depth: 150
+      price: 10000
+    6:
+      depth: 200
+      price: 25000
+    7:
+      depth: 300
+      price: 50000
+
+# Internal economy. No Vault needed.
+economy:
+  starting-balance: 0.0
+  # Percent of the reward that goes to the worker when a worker mines.
+  worker-percent: 70
+  # Percent of the reward that goes to the mine owner when a worker mines.
+  owner-percent: 30
+
+# Ore distribution. Depth is measured from the top of each player's mine.
+# "chance" is the chance this ore is rolled for a freshly regenerated block at that depth.
+ores:
+  coal:
+    block: COAL_ORE
+    min-depth: 10
+    max-depth: 50
+    chance: 0.10
+    reward: 2
+    required-pickaxe: WOOD
+  iron:
+    block: IRON_ORE
+    min-depth: 30
+    max-depth: 100
+    chance: 0.07
+    reward: 5
+    required-pickaxe: STONE
+  gold:
+    block: GOLD_ORE
+    min-depth: 60
+    max-depth: 150
+    chance: 0.04
+    reward: 10
+    required-pickaxe: IRON
+  diamond:
+    block: DIAMOND_ORE
+    min-depth: 100
+    max-depth: 300
+    chance: 0.015
+    reward: 50
+    required-pickaxe: DIAMOND
+  stone:
+    block: STONE
+    min-depth: 0
+    max-depth: 320
+    chance: 1.0
+    reward: 1
+    required-pickaxe: WOOD
+
+# Block used as the wall material surrounding the 1-block shaft.
+wall-block: SMOOTH_STONE
+
+# Surface cap block placed at the very top of the shaft.
+surface-block: GRASS_BLOCK
+
+# Lighting and darkness rules.
+lighting:
+  torch-radius: 5
+  darkness-enabled: true
+  # Check every N ticks (20 ticks = 1 second).
+  check-period-ticks: 40
+  # Try DARKNESS first; fall back to BLINDNESS if DARKNESS is unavailable.
+  fallback-blindness: true
+
+# Block regeneration after mining. One mining = one reward; the block
+# respawns later so the mine is never permanently emptied.
+regeneration:
+  delay-seconds: 3
+
+# Pickaxe catalog. Order = upgrade tier.
+pickaxes:
+  WOOD:
+    display: "&f&lДеревянная кирка"
+    lore:
+      - "&7Стартовая кирка"
+      - ""
+      - "&7Цена: &aБесплатно"
+    price: 0
+    durability: 100
+    material: WOODEN_PICKAXE
+  STONE:
+    display: "&6&lКаменная кирка"
+    lore:
+      - "&7Прочность: &a250"
+      - ""
+      - "&7Цена: &a$500"
+    price: 500
+    durability: 250
+    material: STONE_PICKAXE
+  IRON:
+    display: "&f&lЖелезная кирка"
+    lore:
+      - "&7Прочность: &a500"
+      - ""
+      - "&7Цена: &a$1500"
+    price: 1500
+    durability: 500
+    material: IRON_PICKAXE
+  DIAMOND:
+    display: "&b&lАлмазная кирка"
+    lore:
+      - "&7Прочность: &a1000"
+      - ""
+      - "&7Цена: &a$5000"
+    price: 5000
+    durability: 1000
+    material: DIAMOND_PICKAXE
+
+# Self-running tasks.
+tasks:
+  hud-update-ticks: 20
+  autosave-seconds: 120
+
+# Reward particles / sounds on rare ore.
+effects:
+  rare-ore-particle: "CRIT"
+  rare-ore-sound: "BLOCK_NOTE_BLOCK_PLING"
+  common-ore-sound: "BLOCK_STONE_BREAK"
+  money-sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+  pickaxe-buy-sound: "BLOCK_ANVIL_USE"
+  upgrade-sound: "BLOCK_BEACON_POWER_SELECT"

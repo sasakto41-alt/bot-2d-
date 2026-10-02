@@ -1,0 +1,22 @@
+name: DeepDigger
+version: 1.0.0
+main: com.example.deepdigger.DeepDiggerPlugin
+api-version: '1.20'
+author: DeepDiggerTeam
+description: Persistent personal mines plugin. Dig deep, mine ore, hire workers, profit.
+
+commands:
+  deepdigger:
+    description: Main Deep Digger command
+    usage: /deepdigger help
+    aliases:
+      - dd
+      - dig
+      - mine
+permissions:
+  deepdigger.use:
+    description: Allows basic Deep Digger usage
+    default: true
+  deepdigger.admin:
+    description: Allows admin Deep Digger commands
+    default: op

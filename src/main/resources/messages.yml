@@ -1,0 +1,89 @@
+# ============================================================
+#                  DEEP DIGGER MESSAGES
+# ============================================================
+
+prefix: "&6&lDeep Digger &8» "
+
+no-permission: "&cУ вас нет прав."
+not-enough-money: "&cНедостаточно денег."
+unknown-command: "&cНеизвестная команда. Введите &e/deepdigger help"
+player-only: "&cЭта команда только для игроков."
+player-not-found: "&cИгрок не найден."
+player-not-online: "&cИгрок не в сети."
+
+# Mine creation / state.
+mine-created: "&aЛичная шахта создана! Стартовая глубина: &f30 &aблоков."
+mine-upgraded: "&aШахта улучшена! Новая глубина: &f{depth} &aблоков."
+mine-already-max: "&cВаша шахта уже на максимальном уровне."
+no-mine: "&cУ вас нет шахты. Введите &e/deepdigger mine"
+
+# Pickaxe messages.
+better-pickaxe: "&cНужна кирка получше!"
+pickaxe-bought: "&aКуплена новая кирка: &f{pickaxe}"
+pickaxe-already-owned: "&7Эта кирка у вас уже есть."
+pickaxe-held-required: "&7Возьмите кирку в руку и нажмите Shift, чтобы открыть меню."
+
+# Mining.
+mined-ore: "&6⛏ &7Вы добыли &f{ore}&7!"
+mined-stone: "&7⛏ Вы добыли камень."
+money-earned: "&a+${amount}"
+worker-earned: "&aВам начислено &f${amount} &aот работы в шахте."
+owner-earned: "&aВладелец шахты получил &f${amount} &aот вашего работника."
+cannot-break-wall: "&cБоковые стены шахты нельзя ломать."
+cannot-break-outside: "&cВы находитесь не в своей шахте."
+not-allowed-mine: "&cВы не можете добывать в этой шахте."
+
+# Worker system.
+invite-sent: "&aПриглашение отправлено игроку &f{player}"
+invite-received-title: "&6Deep Digger"
+invite-received-subtitle: "&7Игрок &f{player} &7приглашает вас работать в своей шахте."
+invite-received-message: "&7Игрок &f{player} &7приглашает вас работать в своей шахте. &a/deepdigger accept &7или &c/deepdigger deny"
+invite-accepted: "&aВы приняли приглашение от &f{player}"
+invite-owner-notify: "&f{player} &aпринял ваше приглашение и стал работником."
+invite-denied: "&cВы отклонили приглашение."
+invite-expired: "&cПриглашение истекло."
+no-pending-invite: "&cУ вас нет активных приглашений."
+no-self-invite: "&cНельзя пригласить себя."
+max-workers-reached: "&cВ шахте уже максимальное количество работников."
+player-already-worker: "&cЭтот игрок уже работает у вас."
+not-a-worker: "&cЭтот игрок не является вашим работником."
+kicked-worker: "&aРаботник &f{player} &aисключён из шахты."
+worker-kicked-notify: "&cВы больше не работаете в шахте &f{owner}"
+not-mine-owner: "&cВы не владелец этой шахты."
+worker-list-header: "&6Работники вашей шахты:"
+worker-list-empty: "&7У вас нет работников."
+worker-list-entry: "&8• &f{player}"
+
+# Teleport.
+teleport-surface: "&aВы телепортированы к своей шахте."
+teleport-other: "&aВы телепортированы к шахте игрока &f{player}"
+no-teleport-target: "&cНе удалось найти шахту."
+
+# Admin.
+admin-mine-created: "&aСоздана шахта для &f{player}"
+admin-mine-reset: "&aШахта игрока &f{player} &aсброшена."
+admin-mine-deleted: "&aШахта игрока &f{player} &aудалена."
+admin-tp: "&aВы телепортированы к шахте игрока &f{player}"
+admin-reloaded: "&aКонфигурация перезагружена."
+
+# Help header.
+help-header: "&6&l=== Deep Digger — команды ==="
+help-line: "&e/{cmd} &7— {desc}"
+help-footer: "&7Алиасы: &edd, dig, mine"
+
+# HUD inside sidebar.
+hud-title: "&6&l⛏ DEEP DIGGER"
+hud-depth: "&7Глубина: &f{depth} м"
+hud-mine-level: "&7Шахта: &f{level}"
+hud-pickaxe: "&7Кирка: &f{pickaxe}"
+hud-balance: "&7Баланс: &a${balance}"
+hud-workers: "&7Работники: &f{workers}/{max}"
+
+# GUI titles.
+gui-main-title: "&6&l⛏ Deep Digger"
+gui-pickaxe-title: "&6&l⛏ Кирки"
+gui-mine-title: "&6&l⛏ Моя шахта"
+gui-workers-title: "&6&l👥 Работники"
+gui-info-title: "&6&lℹ Информация"
+gui-invite-title: "&6&l📨 Приглашение"
+gui-upgrade-title: "&6&l⬆ Улучшить шахту"
